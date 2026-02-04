@@ -150,14 +150,37 @@ class VoiceClassifier:
             # Apply penalty to the probability of being fake
             prob_fake_adjusted = prob_fake * confidence_penalty
             
+            # --- LANGUAGE AWARENESS ---
+            is_english = language.lower() in ["english", "en"]
+            
             # 3. Final Decision
             # We demand HIGHER evidence for AI (Conservatism)
-            threshold = 0.65 # Default threshold (requires >65% certainty)
             
-            # If we have AI flags, we can trust the model more (lower threshold)
+            # Base threshold
+            threshold = 0.65 
+            
+            # Dynamic Thresholding based on Heuristics
             if len(ai_flags) >= 2:
-                threshold = 0.55
-            
+                # Strong heuristic evidence (e.g. robotic pitch + flat spectrum)
+                # We lower the bar for the model
+                threshold = 0.50
+            elif len(ai_flags) == 1:
+                # Some heuristic evidence
+                threshold = 0.60
+            else:
+                # ZERO heuristic evidence (Pitch/Flatness look human)
+                # The model is alone in its accusation.
+                if not is_english:
+                    # Foreign language + No Heuristics = FALSE POSITIVE likely.
+                    # We force Human verdict unless we want to be extremely risky.
+                    # Current decision: Force Human to protect against bias.
+                    print("DEBUG: Non-English audio with NO heuristic AI flags. Forcing Human verdict.")
+                    prob_fake_adjusted = 0.0 
+                else:
+                    # English + No Heuristics. 
+                    # Model must be overwhelmingly confident (>98%) to override heuristics.
+                    threshold = 0.98
+
             if prob_fake_adjusted > threshold:
                 prediction = "AI_GENERATED"
                 confidence = prob_fake_adjusted
@@ -165,8 +188,7 @@ class VoiceClassifier:
                 prediction = "HUMAN"
                 confidence = 1.0 - prob_fake_adjusted
             
-            # 4. Language Awareness Dampening
-            is_english = language.lower() in ["english", "en"]
+            # 4. Language Awareness Dampening (for the resulting score)
             if prediction == "AI_GENERATED" and not is_english:
                  confidence *= 0.9 # Extra caution for non-English
             
