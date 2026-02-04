@@ -77,16 +77,17 @@ def process_audio(input_data) -> torch.Tensor:
     # 4. Convert to Numpy Array (float32)
     # pydub audio is int16 or int32 generally, we want float32 [-1, 1]
     samples = np.array(audio_segment.get_array_of_samples())
+    print(f"DEBUG: Loaded samples array shape: {samples.shape}")
     
     if audio_segment.sample_width == 2:
         samples = samples.astype(np.float32) / 32768.0
     elif audio_segment.sample_width == 4:
         samples = samples.astype(np.float32) / 2147483648.0
     else:
-        # Fallback for 8-bit?
         samples = samples.astype(np.float32) / 128.0
 
     # 5. Convert to Torch Tensor [1, T]
     waveform = torch.tensor(samples).unsqueeze(0)
+    print(f"DEBUG: Output waveform tensor shape: {waveform.shape}")
     
     return waveform
