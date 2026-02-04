@@ -4,6 +4,23 @@ import sys
 # Add project root to sys.path to allow importing 'src'
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+# CRITICAL: Apply compatibility patches BEFORE any speechbrain imports
+import torchaudio
+if not hasattr(torchaudio, "list_audio_backends"):
+    def _list_audio_backends():
+        return ["soundfile"]
+    torchaudio.list_audio_backends = _list_audio_backends
+
+import huggingface_hub
+_original_hf_hub_download = huggingface_hub.hf_hub_download
+def _patched_hf_hub_download(*args, **kwargs):
+    if "use_auth_token" in kwargs:
+        token_val = kwargs.pop("use_auth_token")
+        if "token" not in kwargs:
+            kwargs["token"] = token_val
+    return _original_hf_hub_download(*args, **kwargs)
+huggingface_hub.hf_hub_download = _patched_hf_hub_download
+
 import time
 import base64
 import traceback
