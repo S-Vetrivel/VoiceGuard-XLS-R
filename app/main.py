@@ -73,7 +73,7 @@ async def detect_voice(
              raise HTTPException(status_code=400, detail="Could not process audio.")
              
         # 4. Predict
-        result = classifier_instance.predict(waveform)
+        result = classifier_instance.predict(waveform, language=request_data.language)
         
         if "error" in result:
              raise HTTPException(status_code=500, detail=result["error"])
