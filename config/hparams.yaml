@@ -1,0 +1,23 @@
+model:
+  name: "nii-yamagishilab/mms-300m-anti-deepfake"
+  feature_extractor: "facebook/mms-300m"
+  use_safetensors: true
+  device: "cpu" # Default, can be overridden
+
+vad:
+  repo: "speechbrain/vad-crdnn-libriparty"
+  activation_threshold: 0.7
+  save_path: "model_checkpoints"
+
+rules:
+  pitch_std_threshold: 50.0
+  spectral_centroid_threshold: 3000.0
+  rms_std_threshold: 0.01
+
+pipeline:
+  weights:
+    model: 0.7
+    rules: 0.3
+  thresholds:
+    ai_generated: 0.70
+    human: 0.30

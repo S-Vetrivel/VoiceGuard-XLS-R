@@ -27,3 +27,4 @@ verify_pipeline.py
 test_api.py
 test_vad.wav
 tmp_vad_model/
+references/
