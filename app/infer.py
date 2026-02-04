@@ -14,15 +14,16 @@ class VoiceClassifier:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Loading Deepfake Detection model on {self.device}...")
         
-        # Load Fine-Tuned Deepfake Detection Model
-        self.model_name = "mo-thecreator/Deepfake-audio-detection"
+        # Load MMS-300M Anti-Deepfake Model (XLS-R based)
+        self.model_name = "nii-yamagishilab/mms-300m-anti-deepfake"
+        self.feature_extractor_name = "facebook/mms-300m"
         
         try:
-            self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(self.model_name)
+            self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(self.feature_extractor_name)
             self.model = AutoModelForAudioClassification.from_pretrained(self.model_name)
             self.model.to(self.device)
             self.model.eval()
-            print(f"Model {self.model_name} loaded successfully.")
+            print(f"Model {self.model_name} loaded successfully (MMS Backbone).")
             # Labels: {0: 'fake', 1: 'real'} usually for this model
             print(f"Labels: {self.model.config.id2label}")
         except Exception as e:
@@ -154,31 +155,28 @@ class VoiceClassifier:
             is_english = language.lower() in ["english", "en"]
             
             # 3. Final Decision
-            # We demand HIGHER evidence for AI (Conservatism)
+            # We demand HIGHER evidence for AI (Conservatism) but trust MMS more.
             
             # Base threshold
-            threshold = 0.65 
+            threshold = 0.60
             
             # Dynamic Thresholding based on Heuristics
             if len(ai_flags) >= 2:
                 # Strong heuristic evidence (e.g. robotic pitch + flat spectrum)
-                # We lower the bar for the model
                 threshold = 0.50
             elif len(ai_flags) == 1:
                 # Some heuristic evidence
-                threshold = 0.60
+                threshold = 0.55
             else:
                 # ZERO heuristic evidence (Pitch/Flatness look human)
                 # The model is alone in its accusation.
                 if not is_english:
-                    # Foreign language + No Heuristics = FALSE POSITIVE likely.
-                    # We force Human verdict unless we want to be extremely risky.
-                    # Current decision: Force Human to protect against bias.
-                    print("DEBUG: Non-English audio with NO heuristic AI flags. Forcing Human verdict.")
-                    prob_fake_adjusted = 0.0 
+                    # Foreign language + No Heuristics.
+                    # MMS is multilingual, so we don't zero it out, but we require HIGH confidence.
+                    print("DEBUG: Non-English audio with NO heuristic AI flags. Requiring high MMS confidence.")
+                    threshold = 0.90 # High bar, but possible (unlike previous 0.0 force)
                 else:
                     # English + No Heuristics. 
-                    # Model must be overwhelmingly confident (>98%) to override heuristics.
                     threshold = 0.98
 
             if prob_fake_adjusted > threshold:
@@ -188,14 +186,14 @@ class VoiceClassifier:
                 prediction = "HUMAN"
                 confidence = 1.0 - prob_fake_adjusted
             
-            # 4. Language Awareness Dampening (for the resulting score)
+            # 4. Language Awareness Dampening (MMS is robust, lesser dampening)
             if prediction == "AI_GENERATED" and not is_english:
-                 confidence *= 0.9 # Extra caution for non-English
+                 confidence *= 0.95 # Slight caution only
             
             # Construct Explanation
             if prediction == "AI_GENERATED":
                 reasons = ai_flags
-                if not reasons: reasons.append("high confidence from deepfake classifier")
+                if not reasons: reasons.append("high confidence from MMS (XLS-R) classifier")
                 explanation = f"AI detected ({confidence*100:.1f}%). Indicators: {', '.join(reasons)}."
             else:
                 reasons = human_flags
