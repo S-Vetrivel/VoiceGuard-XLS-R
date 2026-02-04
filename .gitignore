@@ -1,0 +1,27 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment Variables
+.env
+
+# Models & Large Files (Don't push 1.2GB model weights!)
+model/*.pt
+model/*.bin
+model/*.safetensors
+.huggingface/
+cached_models/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Project Specific
+temp_*
+test_audio.py
+verify_pipeline.py
+test_api.py

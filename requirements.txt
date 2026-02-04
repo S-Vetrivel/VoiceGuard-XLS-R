@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-dotenv
+torch
+torchaudio
+librosa
+numpy
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+transformers
+pydub
+scipy
