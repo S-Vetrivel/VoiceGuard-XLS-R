@@ -31,6 +31,8 @@ class VoiceClassifier:
             print(f"Labels: {self.model.config.id2label}")
         except Exception as e:
             print(f"Error loading model: {e}")
+            import traceback
+            traceback.print_exc()
             self.model = None
 
         # Load SpeechBrain VAD
