@@ -2,7 +2,7 @@ import os
 import sys
 
 # Add project root to sys.path to allow importing 'src'
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import time
 import base64
@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 
 # Import the new pipeline
 try:
+    import src
+    print(f"DEBUG: src module found at {src.__file__}")
     from src.pipeline.detector import VoicePipeline
 except ImportError as e:
     # Fallback or detailed error logging
