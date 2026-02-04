@@ -94,4 +94,10 @@ class ModelWrapper:
             # Typically, LABEL_1 is the positive class (spoof).
             
             ai_prob = probs[0][1].item()
+            
+            # Safety check: handle NaN/Inf (can occur if model weights are improperly loaded)
+            if not torch.isfinite(torch.tensor(ai_prob)):
+                print(f"WARNING: Model returned non-finite value: {ai_prob}. Returning 0.5 as fallback.")
+                return 0.5
+            
             return ai_prob
