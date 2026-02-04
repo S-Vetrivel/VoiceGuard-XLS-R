@@ -64,6 +64,7 @@ class VoiceClassifier:
                 
             t1 = time.time()
             print(f"DEBUG: Inference took {t1 - t0:.3f}s. probs: {probs}")
+            print(f"DEBUG: prob_fake={prob_fake:.6f}, prob_real={prob_real:.6f}")
 
             # 3. Pitch Analysis (for explanation)
             # Use librosa for pitch tracking (fast approximation)
@@ -78,7 +79,7 @@ class VoiceClassifier:
             pitch_var = np.std(f0) if len(f0) > 0 else 0.0
             
             t2 = time.time()
-            print(f"DEBUG: Pitch Detection took {t2 - t1:.3f}s. Variance: {pitch_var}")
+            print(f"DEBUG: Pitch Detection took {t2 - t1:.3f}s. Variance: {pitch_var:.2f}")
 
             # 4. Final Classification Logic
             # Deepfake model is the authority
@@ -90,6 +91,8 @@ class VoiceClassifier:
                 prediction = "HUMAN"
                 confidence = prob_real
                 prob_ai = prob_fake
+            
+            print(f"DEBUG: prediction={prediction}, confidence={confidence:.6f}, prob_ai={prob_ai:.6f}")
 
             # Construct Explanation
             if prediction == "AI_GENERATED":
