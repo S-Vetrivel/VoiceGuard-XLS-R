@@ -13,26 +13,40 @@ class ModelWrapper:
         self.feature_extractor = None
         self.vad = None
         
+        # Log library versions for debugging
+        try:
+            import transformers
+            import safetensors
+            print(f"Library versions - transformers: {transformers.__version__}, safetensors: {safetensors.__version__}")
+        except Exception as e:
+            print(f"Warning: Could not log library versions: {e}")
+        
         self.load_model()
         self.load_vad()
 
     def load_model(self):
         try:
             print(f"Loading Deepfake Detection model {self.model_name} on {self.device}...")
-            self.model = AutoModelForAudioClassification.from_pretrained(
+            model = AutoModelForAudioClassification.from_pretrained(
                 self.model_name, 
                 trust_remote_code=True
             ).to(self.device)
             
             fe_name = self.config.get("feature_extractor", self.model_name)
-            self.feature_extractor = AutoFeatureExtractor.from_pretrained(fe_name)
+            feature_extractor = AutoFeatureExtractor.from_pretrained(fe_name)
+            
+            # Only set if both loaded successfully
+            self.model = model
+            self.feature_extractor = feature_extractor
             self.model.eval()
             print("Model loaded successfully.")
             
         except Exception as e:
             print(f"Error loading model: {e}")
+            print(f"Model name: {self.model_name}, Device: {self.device}")
             traceback.print_exc()
             self.model = None
+            self.feature_extractor = None
 
     def load_vad(self):
         try:
