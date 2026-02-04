@@ -1,3 +1,13 @@
+---
+title: VoiceGuard API
+emoji: 🛡️
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # AI-Generated Voice Detector API
 
 A production-ready REST API that accurately detects whether a given voice recording is **AI-generated** or **Human**.  
