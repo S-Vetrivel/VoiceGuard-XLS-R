@@ -3,6 +3,7 @@ import torch.nn as nn
 import os
 import numpy as np
 import librosa
+import time
 from transformers import Wav2Vec2Model
 from dotenv import load_dotenv
 
@@ -41,6 +42,7 @@ class VoiceClassifier:
         """
         waveform = waveform.to(self.device)
         
+        t0 = time.time()
         # 1. Wav2Vec2 Embedding
         with torch.no_grad():
             outputs = self.encoder(waveform)
@@ -48,7 +50,10 @@ class VoiceClassifier:
             hidden_states = outputs.last_hidden_state
             # Mean Pooling -> [1, 768]
             embedding = torch.mean(hidden_states, dim=1)
-            
+        
+        t1 = time.time()
+        print(f"DEBUG: Wav2Vec2 Embedding took {t1 - t0:.3f}s")
+
         # 2. Pitch Variance
         # Move to CPU for numpy/librosa ops
         wav_np = waveform.squeeze().cpu().numpy()
@@ -72,6 +77,9 @@ class VoiceClassifier:
             pitch_var = pitch_std
         else:
             pitch_var = 0.0
+            
+        t2 = time.time()
+        print(f"DEBUG: Pitch Detection (librosa.pyin) took {t2 - t1:.3f}s")
             
         # Combine
         pitch_feature = torch.tensor([[pitch_var]], device=self.device, dtype=torch.float32)

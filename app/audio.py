@@ -66,6 +66,12 @@ def process_audio(input_data) -> torch.Tensor:
         print(f"CRITICAL ERROR in process_audio: {e}")
         raise ValueError(f"Failed to load audio: {e}")
 
+    # 1.5 Truncate to Max Duration (5 seconds) to prevent timeouts on CPU
+    MAX_DURATION_MS = 5000
+    if len(audio_segment) > MAX_DURATION_MS:
+        print(f"DEBUG: Audio too long ({len(audio_segment)}ms). Truncating to {MAX_DURATION_MS}ms.")
+        audio_segment = audio_segment[:MAX_DURATION_MS]
+
     # 2. Resample to 16kHz
     if audio_segment.frame_rate != TARGET_SR:
         audio_segment = audio_segment.set_frame_rate(TARGET_SR)
