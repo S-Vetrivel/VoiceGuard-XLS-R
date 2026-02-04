@@ -18,8 +18,8 @@ WORKDIR /app
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY --chown=user ./app ./app
+# Copy all application code (src, config, app, etc.)
+COPY --chown=user . .
 
 # Set port
 ENV PORT=7860
