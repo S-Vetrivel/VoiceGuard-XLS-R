@@ -1,4 +1,9 @@
 import os
+import sys
+
+# Add project root to sys.path to allow importing 'src'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import time
 import base64
 import traceback
@@ -9,7 +14,12 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 # Import the new pipeline
-from src.pipeline.detector import VoicePipeline
+try:
+    from src.pipeline.detector import VoicePipeline
+except ImportError as e:
+    # Fallback or detailed error logging
+    print(f"Failed to import src.pipeline.detector. CWD: {os.getcwd()}, Path: {sys.path}")
+    raise e
 
 load_dotenv()
 
