@@ -1,8 +1,8 @@
 fastapi
 uvicorn
 python-dotenv
-torch==2.2.0+cpu
-torchaudio==2.2.0+cpu
+torch==2.2.0
+torchaudio==2.2.0
 librosa
 numpy<2.0.0
 python-multipart
