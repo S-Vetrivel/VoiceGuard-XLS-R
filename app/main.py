@@ -18,7 +18,16 @@ try:
     from src.pipeline.detector import VoicePipeline
 except ImportError as e:
     # Fallback or detailed error logging
-    print(f"Failed to import src.pipeline.detector. CWD: {os.getcwd()}, Path: {sys.path}")
+    root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    print(f"Failed to import src.pipeline.detector.")
+    print(f"CWD: {os.getcwd()}")
+    print(f"Path: {sys.path}")
+    print(f"Root dir: {root_path}")
+    if os.path.exists(root_path):
+        print(f"Contents of root: {os.listdir(root_path)}")
+        src_path = os.path.join(root_path, "src")
+        if os.path.exists(src_path):
+             print(f"Contents of src: {os.listdir(src_path)}")
     raise e
 
 load_dotenv()
