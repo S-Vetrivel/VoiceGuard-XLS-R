@@ -1,6 +1,11 @@
 import os
 import torch
 import torchaudio
+# SpeechBrain compatibility fix for torchaudio >= 2.1
+if not hasattr(torchaudio, "list_audio_backends"):
+    def _list_audio_backends():
+        return ["soundfile"]
+    torchaudio.list_audio_backends = _list_audio_backends
 import librosa
 import numpy as np
 import time
