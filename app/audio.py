@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import io
 import base64
+import os
 from pydub import AudioSegment
 import librosa # Keep librosa for easy array handling if needed, or just use pydub + numpy
 
@@ -19,10 +20,21 @@ def process_audio(input_data) -> torch.Tensor:
         if isinstance(input_data, str):
             # Check if it's a file path
             try:
-                audio_segment = AudioSegment.from_file(input_data)
+                if os.path.isfile(input_data):
+                    audio_segment = AudioSegment.from_file(input_data)
+                else:
+                    raise FileNotFoundError
             except:
                 # Assume Base64 string if file load fails
-                decoded_bytes = base64.b64decode(input_data)
+                # 1. Clean up "data:audio/mp3;base64," prefix if present
+                clean_b64 = input_data
+                if "," in clean_b64:
+                    clean_b64 = clean_b64.split(",", 1)[1]
+                
+                # 2. Remove whitespace/newlines which break some decoders
+                clean_b64 = clean_b64.strip().replace("\n", "").replace(" ", "")
+                
+                decoded_bytes = base64.b64decode(clean_b64)
                 audio_segment = AudioSegment.from_file(io.BytesIO(decoded_bytes))
         elif isinstance(input_data, bytes):
             audio_segment = AudioSegment.from_file(io.BytesIO(input_data))
