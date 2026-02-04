@@ -1,10 +1,13 @@
-import torch
-import torch.nn as nn
 import os
-import numpy as np
+import torch
+import torchaudio
 import librosa
+import numpy as np
 import time
-from transformers import AutoModelForAudioClassification, Wav2Vec2FeatureExtractor
+import shutil
+from transformers import Wav2Vec2FeatureExtractor, AutoModelForAudioClassification
+from speechbrain.inference.VAD import VAD
+import soundfile as sf
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -30,6 +33,19 @@ class VoiceClassifier:
             print(f"Error loading model: {e}")
             self.model = None
 
+        # Load SpeechBrain VAD
+        try:
+            print("Loading SpeechBrain VAD...")
+            self.vad_model = VAD.from_hparams(
+                source="speechbrain/vad-crdnn-libriparty",
+                savedir="tmp_vad_model",
+                run_opts={"device": str(self.device)}
+            )
+            print("SpeechBrain VAD loaded.")
+        except Exception as e:
+            print(f"Error loading VAD: {e}")
+            self.vad_model = None
+
     def calculate_snr(self, audio_np):
         """
         Estimate Signal-to-Noise Ratio (SNR) in dB.
@@ -54,6 +70,48 @@ class VoiceClassifier:
         except Exception:
             return 30.0 # Default to decent SNR if calculation fails
 
+    def apply_vad(self, wav_path):
+        """
+        Apply VAD to filter out silence/noise.
+        Returns cleaned waveform (numpy) or original if failed/empty.
+        """
+        if self.vad_model is None:
+            return None
+        
+        try:
+            # Get speech segments
+            boundaries = self.vad_model.get_speech_segments(wav_path)
+            
+            # If tensor, convert to list
+            if isinstance(boundaries, torch.Tensor):
+                boundaries = boundaries.cpu().numpy()
+            
+            # Load original audio
+            wav, sr = librosa.load(wav_path, sr=16000)
+            
+            if len(boundaries) == 0:
+                print("DEBUG: VAD found no speech. Using original.")
+                return wav
+            
+            # Concatenate segments
+            cleaned_wavs = []
+            for start, end in boundaries:
+                start_sample = int(start * sr)
+                end_sample = int(end * sr)
+                if end_sample > len(wav): end_sample = len(wav)
+                cleaned_wavs.append(wav[start_sample:end_sample])
+            
+            if not cleaned_wavs:
+                return wav
+                
+            final_wav = np.concatenate(cleaned_wavs)
+            print(f"DEBUG: VAD reduced audio from {len(wav)/sr:.2f}s to {len(final_wav)/sr:.2f}s")
+            return final_wav
+            
+        except Exception as e:
+            print(f"VAD Error: {e}")
+            return None
+
     def predict(self, waveform: torch.Tensor, language: str = "Unknown"):
         if self.model is None:
             return {"error": "Model not loaded"}
@@ -63,27 +121,39 @@ class VoiceClassifier:
             wav_np = waveform.squeeze().cpu().numpy()
             sr = 16000
             
-            t0 = time.time()
+            # Save to temp file for VAD (SpeechBrain prefers files)
+            tmp_file = "temp_vad_input.wav"
+            sf.write(tmp_file, wav_np, sr)
             
-            # --- SIGNAL QUALITY CHECKS ---
+            # --- STAGE 1: SPEECHBRAIN VAD ---
+            t0 = time.time()
+            vad_wav = self.apply_vad(tmp_file)
+            
+            # Use VAD audio if valid and not too short, else original
+            if vad_wav is not None and len(vad_wav) > sr * 0.5:
+                wav_for_analysis = vad_wav
+            else:
+                wav_for_analysis = wav_np
+                
+            # Signal Quality Checks (on original to capture noise floor)
             snr_db = self.calculate_snr(wav_np)
             
-            # --- ADVANCED FEATURE EXTRACTION ---
+            # --- ADVANCED FEATURE EXTRACTION (on VAD audio) ---
             # A. Pitch Analysis
             f0, voiced_flag, voiced_probs = librosa.pyin(
-                wav_np, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr=sr
+                wav_for_analysis, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr=sr
             )
             f0_clean = f0[~np.isnan(f0)]
             pitch_var = np.std(f0_clean) if len(f0_clean) > 0 else 0.0
             
             # B. Spectral Flatness
-            flatness = np.mean(librosa.feature.spectral_flatness(y=wav_np))
+            flatness = np.mean(librosa.feature.spectral_flatness(y=wav_for_analysis))
             
             # C. RMS Energy Variance
-            rms = librosa.feature.rms(y=wav_np)[0]
+            rms = librosa.feature.rms(y=wav_for_analysis)[0]
             rms_var = np.std(rms) / (np.mean(rms) + 1e-6)
             
-            # D. Liveness (Pause) Detection
+            # D. Liveness (Pause) Detection (Use original to detect gaps)
             # Count distinct silent intervals (>0.1s)
             silent_intervals = librosa.effects.split(wav_np, top_db=20, frame_length=2048, hop_length=512)
             num_pauses = 0
@@ -95,12 +165,13 @@ class VoiceClassifier:
                          num_pauses += 1
             
             # --- TEMPORAL CONSISTENCY ---
+            # Use VAD audio for Deepfake Classification
             chunk_size = 2 * sr 
             stride = 1 * sr     
             chunks = []
-            for i in range(0, len(wav_np) - chunk_size + 1, stride):
-                chunks.append(wav_np[i : i + chunk_size])
-            if not chunks: chunks = [wav_np]
+            for i in range(0, len(wav_for_analysis) - chunk_size + 1, stride):
+                chunks.append(wav_for_analysis[i : i + chunk_size])
+            if not chunks: chunks = [wav_for_analysis]
             
             chunk_probs = []
             for chunk in chunks:

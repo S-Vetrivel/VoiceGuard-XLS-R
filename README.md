@@ -17,9 +17,9 @@ Built for the **AI-Generated Voice Detection Challenge** with specific support f
 
 ## 🚀 Features
 
-- **Multilingual Support**: Uses the **XLS-R (Cross-Lingual Speech Representation)** model (`wav2vec2-large-xlsr-53`) pre-trained on 53 languages.
+- **Multilingual Support**: Uses the state-of-the-art **MMS-300M (Massively Multilingual Speech)** model (`nii-yamagishilab/mms-300m-anti-deepfake`) derived from **XLS-R**, supporting 100+ languages including Indic languages.
 - **Strict API Specification**: Compliant with challenge requirements (Base64 MP3 input, standardized JSON response).
-- **Hybrid Detection**: Combines Deep Learning embeddings with **Acoustic Feature Analysis** (Pitch Variance) for robust detection.
+- **Smart Hybrid Detection**: Combines Deep Learning embeddings with **Acoustic Heuristics** (Pitch, Flatness, Liveness) for "Conservative Consensus" detection.
 - **Explainability**: Provides human-readable explanations for every decision.
 - **Secure**: Protected via `x-api-key` header authentication.
 
@@ -28,7 +28,8 @@ Built for the **AI-Generated Voice Detection Challenge** with specific support f
 ## 🛠️ Tech Stack
 
 - **Framework**: FastAPI (Python)
-- **Model**: PyTorch + HuggingFace Transformers (`facebook/wav2vec2-large-xlsr-53`)
+- **Model**: PyTorch + HuggingFace Transformers (`nii-yamagishilab/mms-300m-anti-deepfake`)
+- **Toolkit**: **SpeechBrain** (Environment ready for advanced audio processing)
 - **Audio Processing**: `pydub` (ffmpeg) + `librosa`
 - **Deployment**: Uvicorn
 
